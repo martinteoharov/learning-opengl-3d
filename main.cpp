@@ -20,9 +20,12 @@ const unsigned int SCR_HEIGHT = 600;
 const char *vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
 "uniform mat4 trans;\n"
+"uniform mat4 projection;\n"
+"uniform mat4 view;\n"
+"uniform mat4 model;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = trans * vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+"   gl_Position = trans * (projection * view * model) * vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
 "}\0";
 const char *fragmentShaderSource = "#version 330 core\n"
 "out vec4 FragColor;\n"
@@ -152,34 +155,66 @@ int main(){
 	double timeElapsed = 0;
 
 
+	glm::vec4 right = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 
+
+	float width = 1920, height = 1200;
+
+
+	float timePassed;
 	while (!glfwWindowShouldClose(window)) {
 		//handle input
 		processInput(window);
 
 		float timeValue = glfwGetTime();
+
 		if( timeValue > timeElapsed ){
 			//control speed of change 
 			timeElapsed += 0.001;
 			float rrv = 1.0f, brv = 0.0f, grv = 1.0f;
-
 			int colorLoc = glGetUniformLocation(shaderProgram, "vertexColor");
 			glUniform4f(colorLoc, rrv, grv, brv, 1.0f);
 
+			
+			// create orgtographic projection
+			glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f);
+
+			// create model
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			// create view
+			glm::mat4 view = glm::mat4(1.0f);
+			// note that we're translating the scene in the reverse direction of where we want to move
+			view = glm::translate(view, glm::vec3(0.0f, 0.0f, -float(timeValue)));
+			//projection matrix
+			glm::mat4 projection;
+			projection = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
 
 			//rotation
 			glm::mat4 trans = glm::mat4(1.0f);
-			float rotate = sin(timeValue) / 18;
-			trans = glm::rotate(trans, glm::degrees(rotate), glm::vec3(1.0, 1.0, 1.0));
-			trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+			float bounce = sin(timeValue);
 
+			trans = glm::translate(trans, glm::vec3(bounce, bounce/4, bounce/4));
+			trans = glm::rotate(trans, glm::degrees(timeValue/100), glm::vec3(1.0, 1.0, 1.0));
+
+			//feeding to uniform
 			int transformLoc = glGetUniformLocation(shaderProgram, "trans");
 			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+			int modelLoc = glGetUniformLocation(shaderProgram, "model");
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			int viewLoc = glGetUniformLocation(shaderProgram, "view");
+			glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+			int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+			glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+			// FPS counter
+			std::cout << "fps:" <<  1 / timePassed << "\r";
 		}
 
 		// clear & draw
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -189,6 +224,9 @@ int main(){
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		timePassed = glfwGetTime() - timeValue;
+
 	}
 
 	// optional: de-allocate all resources once they've outlived their purpose:
