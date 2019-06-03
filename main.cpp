@@ -36,6 +36,23 @@ const char *fragmentShaderSource = "#version 330 core\n"
 //"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
 "}\n\0";
 
+int movementProcessInput(GLFWwindow *window){
+	//front
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		return 1;
+	//left
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		return 2;
+	//right
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		return 3;
+	//back
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		return 4;
+
+	return 0;
+}
+
 int main(){
 
 	double timeElapsed = 0;
@@ -163,75 +180,82 @@ int main(){
 
 	glm::vec4 right = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 
+	float posX = 0, posY = 0, posZ = 0;
 
 	while (!glfwWindowShouldClose(window)) {
 		//TODO line smoothing
 		//handle input
 		processInput(window);
+		int key = movementProcessInput(window);
 
 		float timeValue = glfwGetTime();
 
-		if( timeValue > timeElapsed ){
-			//control speed of change 
-			timeElapsed += 0.001;
-			float rrv = 1.0f, brv = 0.0f, grv = 1.0f;
-			int colorLoc = glGetUniformLocation(shaderProgram, "vertexColor");
-			glUniform4f(colorLoc, rrv, grv, brv, 1.0f);
+		float rrv = 1.0f, brv = 0.0f, grv = 1.0f;
+		int colorLoc = glGetUniformLocation(shaderProgram, "vertexColor");
+		glUniform4f(colorLoc, rrv, grv, brv, 1.0f);
 
-			
-			// create orgtographic projection
-			glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f);
 
-			// create model
-			glm::mat4 model = glm::mat4(1.0f);
-			model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-			// create view
-			glm::mat4 view = glm::mat4(1.0f);
-			// note that we're translating the scene in the reverse direction of where we want to move
-			view = glm::translate(view, glm::vec3(0.0f, 0.0f, -10.0f));
-			//projection matrix
-			glm::mat4 projection;
-			projection = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
+		// create orgtographic projection
+		glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f);
 
-			//rotation
-			glm::mat4 trans = glm::mat4(1.0f);
-			float bounce = sin(timeValue);
+		// create model
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		// create view
+		glm::mat4 view = glm::mat4(1.0f);
+		// note that we're translating the scene in the reverse direction of where we want to move
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -10.0f));
+		//projection matrix
+		glm::mat4 projection;
+		projection = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
 
-			trans = glm::translate(trans, glm::vec3(0.0f, 0.0f, 0.0f));
-			trans = glm::rotate(trans, glm::degrees(timeValue/100), glm::vec3(1.0, 1.0, 0.5));
+		//rotation
+		glm::mat4 trans = glm::mat4(1.0f);
+		float bounce = sin(timeValue);
 
-			//feeding to uniform
-			int transformLoc = glGetUniformLocation(shaderProgram, "trans");
-			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
-			int modelLoc = glGetUniformLocation(shaderProgram, "model");
-			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-			int viewLoc = glGetUniformLocation(shaderProgram, "view");
-			glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-			int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
-			glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-		}
+
+		//handle controls
+		if( key == 1 ) posY -= 0.001;
+		if( key == 4 ) posY += 0.001;
+
+		if( key == 3 ) posX -= 0.001;
+		if( key == 2 ) posX += 0.001;
+		
+
+		//movement translations
+		trans = glm::translate(trans, glm::vec3(posX, 0.0f, posY));
+		std::cout << posX << " - " << 0.0f << " - " << posY << std::endl;
+		trans = glm::rotate(trans, glm::degrees(timeValue/100), glm::vec3(1.0, 1.0, 0.5));
+
+		//feeding to uniform
+		int transformLoc = glGetUniformLocation(shaderProgram, "trans");
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+		int modelLoc = glGetUniformLocation(shaderProgram, "model");
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		int viewLoc = glGetUniformLocation(shaderProgram, "view");
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+
+
+		// clear & draw
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glUseProgram(shaderProgram);
+		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		// glBindVertexArray(0); // no need to unbind it every time 
+		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+
 		// FPS counter
 		if(timeValue > timeElapsedFPS){
 		       	std::cout << "fps:" <<  1 / timePassed << "\r";
 			timeElapsedFPS += 0.1;
 		}
 		
-
-		// clear & draw
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		glUseProgram(shaderProgram);
-		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		
-		// glBindVertexArray(0); // no need to unbind it every time 
-
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-
-		timePassed = glfwGetTime() - timeValue;
 
 	}
 
@@ -251,6 +275,7 @@ int main(){
 void processInput(GLFWwindow *window) {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
