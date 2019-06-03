@@ -37,7 +37,14 @@ const char *fragmentShaderSource = "#version 330 core\n"
 "}\n\0";
 
 int main(){
+
+	double timeElapsed = 0;
+	double timeElapsedFPS = 0;
+	float width = 1920, height = 1200;
+	float timePassed;
+
 	// glfw: initialize and configure
+	
 	// ------------------------------
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -152,17 +159,13 @@ int main(){
 
 	// render loop
 	// -----------
-	double timeElapsed = 0;
 
 
 	glm::vec4 right = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 
 
-	float width = 1920, height = 1200;
-
-
-	float timePassed;
 	while (!glfwWindowShouldClose(window)) {
+		//TODO line smoothing
 		//handle input
 		processInput(window);
 
@@ -185,7 +188,7 @@ int main(){
 			// create view
 			glm::mat4 view = glm::mat4(1.0f);
 			// note that we're translating the scene in the reverse direction of where we want to move
-			view = glm::translate(view, glm::vec3(0.0f, 0.0f, -float(timeValue)));
+			view = glm::translate(view, glm::vec3(0.0f, 0.0f, -10.0f));
 			//projection matrix
 			glm::mat4 projection;
 			projection = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 100.0f);
@@ -194,8 +197,8 @@ int main(){
 			glm::mat4 trans = glm::mat4(1.0f);
 			float bounce = sin(timeValue);
 
-			trans = glm::translate(trans, glm::vec3(bounce, bounce/4, bounce/4));
-			trans = glm::rotate(trans, glm::degrees(timeValue/100), glm::vec3(1.0, 1.0, 1.0));
+			trans = glm::translate(trans, glm::vec3(0.0f, 0.0f, 0.0f));
+			trans = glm::rotate(trans, glm::degrees(timeValue/100), glm::vec3(1.0, 1.0, 0.5));
 
 			//feeding to uniform
 			int transformLoc = glGetUniformLocation(shaderProgram, "trans");
@@ -206,10 +209,13 @@ int main(){
 			glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 			int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
 			glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-			// FPS counter
-			std::cout << "fps:" <<  1 / timePassed << "\r";
 		}
+		// FPS counter
+		if(timeValue > timeElapsedFPS){
+		       	std::cout << "fps:" <<  1 / timePassed << "\r";
+			timeElapsedFPS += 0.1;
+		}
+		
 
 		// clear & draw
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
